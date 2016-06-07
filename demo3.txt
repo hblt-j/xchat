@@ -1,0 +1,210 @@
+app.js
+
+/**
+ * Module dependencies.
+ */
+/*
+var app = require('http').createServer(handler)
+    , io = require('socket.io').listen(app)
+    , fs = require('fs')    ;
+
+   app.listen(99) ;
+   function handler(req,res){
+       fs.readFile(__dirname+'/index.html',function(err,data){
+           if(err){
+               res.writeHead(500) ;
+               return res.end('Error loading index.html') ;
+           }
+           res.writeHead(200) ;
+           res.end(data) ;
+
+       });
+   }
+   io.sockets.on('connection',function(socket){
+         socket.emit('news',{hello : 'world'}) ;
+         socket.on('my other event',function(data){
+            console.log(data) ;
+         });
+   }) ;
+ */
+
+
+
+var express = require('express');
+var routes = require('./routes');
+var http = require('http');
+var path = require('path');
+var app = express();
+
+// all environments
+app.set('port', process.env.PORT || 3000);
+app.set('views', path.join(__dirname, 'views'));
+app.set('view engine', 'ejs');
+
+app.use(express.favicon());
+app.use(express.logger('dev'));
+app.use(express.bodyParser({uploadDir:'./upload'}));
+app.use(express.methodOverride());
+
+app.use(express.cookieParser());
+
+
+app.use(app.router);
+app.use(express.static(path.join(__dirname, 'public')));
+
+// development only
+if ('development' == app.get('env')) {
+    app.use(express.errorHandler());
+}
+
+routes(app) ;
+
+var ppa = http.createServer(app).listen(app.get('port'), function(){
+    console.log('Express server listening on port ' + app.get('port'));
+});
+
+ io = require('socket.io').listen(ppa) ;
+ io.sockets.on('connection',function(socket){
+     socket.on('message',function(msg){
+         console.log('Message Receive:===================== '+msg) ;
+         socket.broadcast.emit('message',msg) ;
+     }) ;
+
+ }) ;
+
+routes里面的index.js
+
+/*
+ * GET home page.
+ */
+
+
+
+
+ module.exports = function(app){
+     app.get('/',function(req,res){
+        res.render('login');
+     }) ;
+     app.post('/login',function(req,res){
+          var username = req.body.username ;
+          res.render('index',{username:username}) ;
+     })  ;
+
+
+ };
+
+登录页面
+
+ <html>
+ <head>
+
+
+ <title>login</title>
+ <link  rel="stylesheet" type="text/css" href="/stylesheets/bootstrap.css"  />
+ </head>
+
+
+ <body>
+
+
+ <div class="container" style="width:270px;">
+
+
+       <form class="form-signin" method="post" action="login">
+         <h2 class="form-signin-heading">Please sign in</h2>
+         <input type="text" class="form-control" placeholder="UserName" autofocus="" name="username">
+         <label class="checkbox">
+           <input type="checkbox" value="remember-me"> Remember me
+         </label>
+         <button class="btn btn-lg btn-primary btn-block" type="submit">Sign in</button>
+       </form>
+
+
+     </div>
+ </body>
+ </html>
+
+聊天页面
+
+<html>
+ <head></head>
+ <link rel='stylesheet' href='/stylesheets/bootstrap.css' />
+ <link rel='stylesheet' href='/stylesheets/qqface.css' />
+  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+      <script src="../socket.io/socket.io.js"></script>
+        <script src="/javascripts/jquery.qqFace.js"></script>
+      <script>
+           $(function(){
+                var socket = io.connect() ;
+                socket.on('message',function(msg){
+                   $("#chatcontent").append("<p>"+msg+"</p>");
+                });
+                $("#sub").click(function(){
+                    var con = $("#content").val();
+                    if(con.length==0){
+                        $("#tip").css('display','block');
+                    } else{
+                          $("#tip").css('display','none');
+                          var uname = $("#username").val();
+                          if(uname.length ==0){ uanme='二货'} ;
+                       //下面是‘组装’聊天记录里要显示的内容
+                          var date = new Date();
+                          var currdate = date.getFullYear()+'年'+date.getMonth()+'月'+date.getDate()+'日  '+date.getHours()+':'+date.getMinutes()+':'+date.getSeconds();
+                          var title = currdate+'     '+uname+'说:<br>' ;
+                          var sendcon = $("<div/>").html(replace_em(con)).html();
+                          var msg = title+sendcon ;
+                          $("#content").val('');
+                           $("#chatcontent").append("<p>"+msg+"</p>");
+                           socket.send(msg);
+                    }
+                });
+
+
+                   $('.emotion').qqFace({
+                        assign:'content', //给输入框赋值
+                        path:'../face/'    //表情图片存放的路径
+                    });
+
+
+           });
+           //处理qq表情  ,数据库中可保存字符串，页面中利用此函数可以显示相应的图片
+           function replace_em(str){
+               str = str.replace(/\</g,'<；');
+               str = str.replace(/\>/g,'>；');
+               str = str.replace(/\n/g,'<；br/>；');
+               str = str.replace(/\[em_([0-9]*)\]/g,'<img src="face/$1.gif" border="0" />');
+               return str;
+           }
+      </script>
+ <body>
+    <div style="margin:0 auto;width:500px;">
+      <div class="panel panel-primary">
+                <div class="panel-heading">
+                  <h3 class="panel-title">聊天记录</h3>
+                </div>
+                <div class="panel-body" style="height:300px;margin-top:20px;overflow-y:auto;" id="chatcontent">
+
+
+                </div>
+      </div>
+      <div class="alert alert-warning" id="tip" style="display:none;">
+         发送内容不能为空!
+      </div>
+      <div class="panel panel-primary">
+          <div class="panel-heading">
+            <h3 class="panel-title">输入框</h3>
+          </div>
+          <div class="panel-body" style="height:250px;">
+
+
+                 <input type="hidden" id="username" value="<%=username %>" >
+                 <textarea cols="74" rows="8" name="content" id="content"></textarea> <br /><br />
+                 <div>
+                         <div style="float:left"><span class="emotion">表情</span></div>
+                          <div style="float:right;"><input type="button" class="btn  btn-primary " value="发送" id="sub"  /></div>
+                 </div>
+          </div>
+        </div>
+     </div>
+ </body>
+</html>

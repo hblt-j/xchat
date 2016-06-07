@@ -1,0 +1,105 @@
+body {
+/*  background-color: #253440;*/
+}
+div{
+  width: 800px;
+  height: 100%;
+  
+}
+dl {
+  background-color: #fff;
+  margin:0px;
+  height:1px;
+}
+.clearfix:after {
+  visibility: hidden;
+  display: block;
+  font-size: 0;
+  content: " ";
+  clear: both;
+  height: 0;
+}
+
+h1 {
+  margin: 0;
+  padding: 10px; 
+  background-color: #253440;
+  color: #fff;
+  border-bottom: 1px solid #263237;  
+}
+
+form {
+  margin: 0;
+  padding: 5px;
+  background-color: #253440;
+  height:100%
+}
+
+input {  
+  width: 80%;
+  border: 1px dashed #fff;
+  border-radius: 3px;
+  padding: 5px;
+  margin-right: 5px;
+  background:#253440;
+}
+
+button {
+  background-color: #253440;
+  color: #f92424;
+  border: 1px solid #fff;
+  border-radius: 3px;
+  padding: 5px 10px;
+  opacity:0.7
+}
+
+#messages {
+  list-style-type: none;
+  margin: 0;
+  padding: 1px 5px;
+  background-color: #253440;
+
+}
+
+#messages li {
+  margin: 5px 0;
+  padding: 0;
+  border: 0px solid #ccc;
+  border-radius: 5px;
+}
+
+.header {  
+  font-size: 12px;
+  color: #666;
+  padding: 0px;
+  border-bottom: 0px solid #ccc;
+  border-top-left-radius: 5px;
+  border-top-right-radius: 5px;
+}
+
+.me .header {
+  background-color: lightyellow;
+}
+
+.who {
+  float: left;
+  font-weight: bold; 
+  width:auto; 
+}
+
+.when {
+  float: left;
+  font-style: italic;
+  color: #999;
+  width:20%;
+}
+
+.msg {
+  padding: 0px;
+}
+
+.notice {
+  padding: 5px;
+  color: #999;
+  font-style: italic;
+}

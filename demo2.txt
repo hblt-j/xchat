@@ -1,0 +1,205 @@
+
+vaocket中完成对session的认证先加上
+
+  parseCookie = require('connect').utils.parseCookie
+  MemoryStore = require('connect/middleware/session/memory');
+
+把上面的所有npm包给装好,还要装socket.io 这是基本的
+
+ 
+
+2.建立一个memory store的实例
+var storeMemory = new express.session.MemoryStore({
+    reapInterval: 60000 * 10
+});
+
+ 
+
+3.为了在express中使用session我们要加上
+
+  app.use(express.cookieParser());
+  app.use(express.session({secret:'wyq',store:storeMemory}));
+
+ 
+
+4.设置session(session的认证)
+
+    io.set('authorization', function(handshakeData, callback){  
+        if(handshakeData.headers.cookie){  
+            handshakeData.cookie = parseCookie(handshakeData.headers.cookie);  
+            var connect_sid = handshakeData.cookie['connect.sid'].split('.')[0].split(':')[1];  
+        }else{  
+            callback('cookie is not defined',false);  
+        }  
+          
+        if (connect_sid) {  
+            storeMemory.get(connect_sid, function(error, session){  
+                if (error) {  
+                    callback(error.message, false);  
+                }else{  
+                    try{  
+                        if(typeof session.username != 'undefined'){   //这里一定要先判断session.username,否则socket中的session一直为空  
+                            handshakeData.session = session;  
+                            callback(null,true);  
+                        }else{  
+                            callback('access die',false);  
+                        }  
+                    }catch(e){  
+                        callback(e.message,false);  
+                    }  
+                }  
+            });  
+        }  
+        else {  
+            callback('nosession');  
+        }  
+    });  
+
+
+
+
+5.然后就是服务器端发送消息给客户端
+
+    io.sockets.on('connection', function (socket){  
+        var session = socket.handshake.session;//session  
+        var username = session.username;  
+        usersWS[username] = socket;  
+        var refresh_online = function(){  
+            var n = [];  
+            for (var i in usersWS){  
+                if(usersWS[i] != usersWS[username]){  
+                    n.push(i);  
+                }  
+            }  
+            io.sockets.emit('online list', n);  
+        }  
+        refresh_online();  
+          
+        socket.on('message',function(message){  
+            socket.broadcast.emit('message',message);  
+        })      
+          
+        socket.broadcast.emit('system message', '【'+username + '】come back!!!');      
+        socket.on('private message',function(to, msg, fn){  
+            var target = usersWS[to];  
+            if (target) {  
+                fn(true);  
+                target.emit('private message', username+'[sixin]', msg);  
+            }  
+            else {  
+                fn(false)  
+                socket.emit('message error', to, msg);  
+            }  
+        });  
+    });  
+
+
+
+
+6.客户端需要处理的事情
+
+<!doctype html>  
+<html>  
+    <head>  
+        <meta charset="gb2312" />  
+        <title>123123</title>  
+        <style>  
+            .red{color:red}  
+            .blue{color:blue}  
+            .green{color:green}  
+        </style>  
+        <script src="/socket.io/socket.io.js"></script>  
+        <script>  
+            window.onload = function(){  
+                var ul = document.getElementById('ul');  
+                var text = document.getElementById('text');  
+                var iosocket = io.connect();  
+                iosocket.on('connect',function(){  
+                    var li = document.createElement('li');  
+                    li.innerHTML = 'conencted';  
+                    ul.appendChild(li);  
+                      
+                    iosocket.on('message',function(message){  
+                        var li = document.createElement('li');  
+                        li.innerHTML = 'you get a message:' + message + ' ' + new Date().toLocaleString();  
+                        li.className = 'blue';  
+                        ul.appendChild(li);  
+                    })  
+                      
+                    iosocket.on('system message',function(message){  
+                        var li = document.createElement('li');  
+                        li.innerHTML = message  
+                        li.className = 'green';  
+                        ul.appendChild(li);  
+                    })  
+                      
+                    iosocket.on('online list',function(message){  
+                        var total = document.getElementById('total');  
+                        var peopleList = document.getElementById('peopleList');  
+                  
+                        total.innerHTML = message.length;  
+                        for(var i=0;i<message.length;i++){  
+                            var li = document.createElement('li');  
+                            li.innerHTML = message[i];  
+                            peopleList.appendChild(li);  
+                        }  
+                    })  
+                      
+                    text.onkeypress = function(ev){  
+                        var oEvent = ev || window.event;  
+                        if(oEvent.keyCode == 13){  
+                            if(text.value.substr(0,1) == '@'){  
+                                //处理私人消息  
+                                var to = text.value.substr(2);  
+                                iosocket.emit('private message',to,'message',function(ok){  
+                                    if(ok){  
+                                        var li = document.createElement('li');  
+                                        li.innerHTML = 'message';  
+                                        ul.appendChild(li);  
+                                    }  
+                                })  
+                            }  
+                        }  
+                    }  
+                      
+                    iosocket.on('private message',function(from,message){  
+                        var ceshi = document.getElementById('ceshi');  
+                        var li = document.createElement('li');  
+                        li.innerHTML = from+ ' : ' + message;  
+                        ul.appendChild(li);  
+                    })  
+                      
+                    iosocket.on('disconnect', function() {  
+                        var li = document.createElement('li');   
+                        li.innerHTML = 'disconnected';  
+                        ul.appendChild(li);  
+                    });  
+                      
+                })              
+            }  
+        </script>  
+    </head>  
+    <body>  
+        <%if(username){%>  
+        <input type="text" id="ceshi" />  
+        welcome to liaotianshi <span style="font-size:14px ;font-weight:bolder"><%=username%><span><br />  
+        liaotian has <span id="total"></span> total people <br />  
+        liaotiaoshi people:  
+            <ul id="peopleList">  
+              
+            </ul>  
+        <br />  
+        all messages: <br />  
+        <div style="width:600px;overflow:auto;border:1px solid #ccc;background:#ccc">  
+        <ul id="ul"></ul>  
+        </div>  
+        <br />  
+        send message:<input type="text" id="text" />  
+        <%}else{%>  
+        <form action="/login" method="post">  
+            input your name:<input type="text" name="username" /><br />  
+                <input type="submit" name="sub" value="join message" />  
+        </form>  
+        <%}%>  
+    </body>  
+</html>  
